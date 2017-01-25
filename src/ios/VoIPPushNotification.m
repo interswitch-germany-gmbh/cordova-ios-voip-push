@@ -3,27 +3,25 @@
 
 @implementation VoIPPushNotification
 
-@synthesize VoIPPushCallbackId;
+@synthesize cordovaCallback;
 
 - (void)init:(CDVInvokedUrlCommand*)command
 {
-  self.VoIPPushCallbackId = command.callbackId;
-  NSLog(@"[objC] callbackId: %@", self.VoIPPushCallbackId);
+    self.cordovaCallback = command.callbackId;
+    NSLog(@"[objC:Cordova] Cordova callback ID: %@", self.cordovaCallback);
 
-  //http://stackoverflow.com/questions/27245808/implement-pushkit-and-test-in-development-behavior/28562124#28562124
-  PKPushRegistry *pushRegistry = [[PKPushRegistry alloc] initWithQueue:dispatch_get_main_queue()];
-  pushRegistry.delegate = self;
-  pushRegistry.desiredPushTypes = [NSSet setWithObject:PKPushTypeVoIP];
+    PKPushRegistry *pushRegistry = [[PKPushRegistry alloc] initWithQueue:dispatch_get_main_queue()];
+    pushRegistry.delegate = self;
+    pushRegistry.desiredPushTypes = [NSSet setWithObject:PKPushTypeVoIP];
 }
 
 - (void)pushRegistry:(PKPushRegistry *)registry didUpdatePushCredentials:(PKPushCredentials *)credentials forType:(NSString *)type{
     if([credentials.token length] == 0) {
-        NSLog(@"[objC] No device token!");
+        NSLog(@"[objC:Cordova] Failed to update push credentials");
         return;
     }
 
-    //http://stackoverflow.com/a/9372848/534755
-    NSLog(@"[objC] Device token: %@", credentials.token);
+    NSLog(@"[objC:Cordova] Did update push credentials: %@", credentials.token);
     const unsigned *tokenBytes = [credentials.token bytes];
     NSString *sToken = [NSString stringWithFormat:@"%08x%08x%08x%08x%08x%08x%08x%08x",
                          ntohl(tokenBytes[0]), ntohl(tokenBytes[1]), ntohl(tokenBytes[2]),
@@ -31,29 +29,21 @@
                          ntohl(tokenBytes[6]), ntohl(tokenBytes[7])];
 
     NSMutableDictionary* results = [NSMutableDictionary dictionaryWithCapacity:2];
-    [results setObject:sToken forKey:@"deviceToken"];
+    [results setObject:sToken forKey:@"token"];
     [results setObject:@"true" forKey:@"registration"];
     
     CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:results];
-    [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]]; //[pluginResult setKeepCallbackAsBool:YES];
-    [self.commandDelegate sendPluginResult:pluginResult callbackId:self.VoIPPushCallbackId];
+    [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId: self.cordovaCallback];
 }
 
 - (void)pushRegistry:(PKPushRegistry *)registry didReceiveIncomingPushWithPayload:(PKPushPayload *)payload forType:(NSString *)type
 {
-    NSDictionary *payloadDict = payload.dictionaryPayload[@"aps"];
-    NSLog(@"[objC] didReceiveIncomingPushWithPayload: %@", payloadDict);
-
-    NSString *message = payloadDict[@"alert"];
-    NSLog(@"[objC] received VoIP msg: %@", message);
-
-    NSMutableDictionary* results = [NSMutableDictionary dictionaryWithCapacity:2];
-    [results setObject:message forKey:@"function"];
-    [results setObject:@"someOtherDataForField" forKey:@"someOtherField"];
+    NSLog(@"[objC:Cordova] didReceiveIncomingPushWithPayload: %@", payload.dictionaryPayload);
     
-    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:results];
+    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:payload.dictionaryPayload];
     [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
-    [self.commandDelegate sendPluginResult:pluginResult callbackId:self.VoIPPushCallbackId];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId: self.cordovaCallback];
 }
 
 @end
