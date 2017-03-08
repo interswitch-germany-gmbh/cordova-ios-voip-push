@@ -1,5 +1,6 @@
 #import "VoIPPushNotification.h"
 #import <Cordova/CDV.h>
+#import <AudioToolbox/AudioToolbox.h>
 
 @implementation VoIPPushNotification
 
@@ -19,6 +20,10 @@
     if([credentials.token length] == 0) {
         NSLog(@"[objC:Cordova] Failed to update push credentials");
         return;
+    }
+    
+    if ([UIApplication instancesRespondToSelector:@selector(registerUserNotificationSettings:)]) {
+        [[UIApplication sharedApplication] registerUserNotificationSettings:[UIUserNotificationSettings settingsForTypes:UIUserNotificationTypeAlert|UIUserNotificationTypeSound categories:nil]];
     }
 
     NSLog(@"[objC:Cordova] Did update push credentials: %@", credentials.token);
@@ -40,6 +45,12 @@
 - (void)pushRegistry:(PKPushRegistry *)registry didReceiveIncomingPushWithPayload:(PKPushPayload *)payload forType:(NSString *)type
 {
     NSLog(@"[objC:Cordova] didReceiveIncomingPushWithPayload: %@", payload.dictionaryPayload);
+    
+    
+    UILocalNotification* notif = [[UILocalNotification alloc] init];
+    notif.alertBody = payload.dictionaryPayload[@"aps"][@"alert"];
+    [[UIApplication sharedApplication] presentLocalNotificationNow:notif];
+    AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
     
     CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:payload.dictionaryPayload];
     [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
