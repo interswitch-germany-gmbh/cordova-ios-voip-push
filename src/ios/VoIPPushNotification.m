@@ -52,7 +52,17 @@
     [[UIApplication sharedApplication] presentLocalNotificationNow:notif];
     AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
     
-    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:payload.dictionaryPayload];
+    NSMutableDictionary *result = [payload.dictionaryPayload mutableCopy];
+    
+    if([[UIApplication sharedApplication] applicationState] == UIApplicationStateActive)
+    {
+        [result setObject:@"read" forKey:@"status"];
+    } else {
+        [result setValue:@"received" forKey:@"status"];
+    }
+    
+    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:result];
+    
     [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
     [self.commandDelegate sendPluginResult:pluginResult callbackId: self.cordovaCallback];
 }
