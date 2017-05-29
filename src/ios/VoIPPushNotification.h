@@ -5,5 +5,6 @@
 
 @property (nonatomic, copy) NSString *cordovaCallback;
 - (void)init:(CDVInvokedUrlCommand*)command;
+- (void)isRegisteredForRemoteNotifications:(CDVInvokedUrlCommand*)command;
 
 @end

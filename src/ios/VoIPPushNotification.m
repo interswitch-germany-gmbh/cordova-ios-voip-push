@@ -1,6 +1,7 @@
 #import "VoIPPushNotification.h"
 #import <Cordova/CDV.h>
 #import <AudioToolbox/AudioToolbox.h>
+#import <UserNotifications/UserNotifications.h>
 
 @implementation VoIPPushNotification
 
@@ -10,7 +11,7 @@
 {
     self.cordovaCallback = command.callbackId;
     NSLog(@"[objC:Cordova] Cordova callback ID: %@", self.cordovaCallback);
-
+    
     PKPushRegistry *pushRegistry = [[PKPushRegistry alloc] initWithQueue:dispatch_get_main_queue()];
     pushRegistry.delegate = self;
     pushRegistry.desiredPushTypes = [NSSet setWithObject:PKPushTypeVoIP];
@@ -25,14 +26,14 @@
     if ([UIApplication instancesRespondToSelector:@selector(registerUserNotificationSettings:)]) {
         [[UIApplication sharedApplication] registerUserNotificationSettings:[UIUserNotificationSettings settingsForTypes:UIUserNotificationTypeAlert|UIUserNotificationTypeSound categories:nil]];
     }
-
+    
     NSLog(@"[objC:Cordova] Did update push credentials: %@", credentials.token);
     const unsigned *tokenBytes = [credentials.token bytes];
     NSString *sToken = [NSString stringWithFormat:@"%08x%08x%08x%08x%08x%08x%08x%08x",
-                         ntohl(tokenBytes[0]), ntohl(tokenBytes[1]), ntohl(tokenBytes[2]),
-                         ntohl(tokenBytes[3]), ntohl(tokenBytes[4]), ntohl(tokenBytes[5]),
-                         ntohl(tokenBytes[6]), ntohl(tokenBytes[7])];
-
+                        ntohl(tokenBytes[0]), ntohl(tokenBytes[1]), ntohl(tokenBytes[2]),
+                        ntohl(tokenBytes[3]), ntohl(tokenBytes[4]), ntohl(tokenBytes[5]),
+                        ntohl(tokenBytes[6]), ntohl(tokenBytes[7])];
+    
     NSMutableDictionary* results = [NSMutableDictionary dictionaryWithCapacity:2];
     [results setObject:sToken forKey:@"token"];
     [results setObject:@"true" forKey:@"registration"];
@@ -66,5 +67,41 @@
     [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
     [self.commandDelegate sendPluginResult:pluginResult callbackId: self.cordovaCallback];
 }
+
+
+- (void)isRegisteredForRemoteNotifications:(CDVInvokedUrlCommand*)command
+{
+    BOOL registered;
+    NSMutableDictionary *result = [[NSMutableDictionary alloc] init];
+    @try {
+        if([[[UIDevice currentDevice]systemVersion]floatValue]<10.0){
+            registered = [UIApplication sharedApplication].isRegisteredForRemoteNotifications;
+            if (registered){
+                [result setObject:@"enabled" forKey:@"push"];
+            } else {
+                [result setObject:@"disabled" forKey:@"push"];
+            }
+            CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:result];
+            [self.commandDelegate sendPluginResult:pluginResult callbackId: command.callbackId];
+            
+        }else {
+            UNUserNotificationCenter* center = [UNUserNotificationCenter currentNotificationCenter];
+            [center getNotificationSettingsWithCompletionHandler:^(UNNotificationSettings * _Nonnull settings) {
+                BOOL registered = settings.authorizationStatus == UNAuthorizationStatusAuthorized;
+                if (registered){
+                    [result setObject:@"enabled" forKey:@"push"];
+                } else {
+                    [result setObject:@"disabled" forKey:@"push"];
+                }
+                CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:result];
+                [self.commandDelegate sendPluginResult:pluginResult callbackId: command.callbackId];
+            }];
+        }
+    }
+    @catch (NSException *exception) {
+        NSLog(@"Permissions Error.");
+    }
+}
+
 
 @end

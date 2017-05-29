@@ -79,6 +79,9 @@ VoIPPushNotification.prototype.off = function (eventName, handle) {
     }
 };
 
+VoIPPushNotification.prototype.status = function (successCallback) {
+    exec(successCallback, function(error){console.log(error)}, "VoIPPushNotification", "isRegisteredForRemoteNotifications", []);
+};
 /**
  * Emit an event.
  *
@@ -127,7 +130,7 @@ module.exports = {
     init: function(options) {
         return new VoIPPushNotification(options);
     },
-
+    
     /**
      * VoIPPushNotification Object.
      *
