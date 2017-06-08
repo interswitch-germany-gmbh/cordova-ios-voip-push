@@ -72,28 +72,29 @@
 - (void)isRegisteredForRemoteNotifications:(CDVInvokedUrlCommand*)command
 {
     BOOL registered;
-    NSMutableDictionary *result = [[NSMutableDictionary alloc] init];
+    NSString *result;
     @try {
         if([[[UIDevice currentDevice]systemVersion]floatValue]<10.0){
             registered = [UIApplication sharedApplication].isRegisteredForRemoteNotifications;
             if (registered){
-                [result setObject:@"enabled" forKey:@"push"];
+                result = @"enabled";
             } else {
-                [result setObject:@"disabled" forKey:@"push"];
+                result = @"disabled";
             }
-            CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:result];
+            CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:result];
             [self.commandDelegate sendPluginResult:pluginResult callbackId: command.callbackId];
             
-        }else {
+        } else {
             UNUserNotificationCenter* center = [UNUserNotificationCenter currentNotificationCenter];
             [center getNotificationSettingsWithCompletionHandler:^(UNNotificationSettings * _Nonnull settings) {
                 BOOL registered = settings.authorizationStatus == UNAuthorizationStatusAuthorized;
+                NSString *result;
                 if (registered){
-                    [result setObject:@"enabled" forKey:@"push"];
+                    result = @"enabled";
                 } else {
-                    [result setObject:@"disabled" forKey:@"push"];
+                    result = @"disabled";
                 }
-                CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:result];
+                CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:result];
                 [self.commandDelegate sendPluginResult:pluginResult callbackId: command.callbackId];
             }];
         }
